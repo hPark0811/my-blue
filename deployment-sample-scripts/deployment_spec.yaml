@@ -1,0 +1,71 @@
+# Stateless application specification
+# The Deployment creates a single replicated Pod, indicated by the 'replicas' field
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: test-instance
+    migrate-for-anthos-optimization: "true"
+    migrate-for-anthos-version: v1.6.0
+  name: test-instance
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: test-instance
+      migrate-for-anthos-optimization: "true"
+      migrate-for-anthos-version: v1.6.0
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: test-instance
+        migrate-for-anthos-optimization: "true"
+        migrate-for-anthos-version: v1.6.0
+    spec:
+      containers:
+      - image: gcr.io/cloud-and-beyond-chapter-7/test-instance:2-3-2021--17-31-32
+        name: test-instance
+        env:
+        - name: "PORT"
+          value: "4567"
+        readinessProbe:
+          exec:
+            command:
+            - /code/ready.sh
+        resources: {}
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - mountPath: /sys/fs/cgroup
+          name: cgroups
+      volumes:
+      - hostPath:
+          path: /sys/fs/cgroup
+          type: Directory
+        name: cgroups
+status: {}
+
+---
+# Headless Service specification -
+# No load-balancing, and a single cluster internal IP, only reachable from within the cluster
+# The Kubernetes endpoints controller will modify the DNS configuration to return records (addresses) that point to the Pods, which are labeled with "app": "test-instance"
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  name: test-instance
+spec:
+  selector:
+    app: test-instance
+  type: LoadBalancer
+  ports:
+   - protocol: TCP 
+     port: 4567
+     targetPort: 4567
+#status:
+  #loadBalancer: {}
+
+---
